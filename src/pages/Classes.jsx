@@ -1,28 +1,60 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
 export default function Classes() {
-  const [classes, setClasses] = useState([
-    { id: '7A', name: 'Kelas 7A' },
-    { id: '7B', name: 'Kelas 7B' },
-    { id: '8A', name: 'Kelas 8A' },
-  ]);
-
+  const [classes, setClasses] = useState([]);
   const [newClass, setNewClass] = useState({ id: '', name: '' });
   const [showAdd, setShowAdd] = useState(false);
+  
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  const handleDelete = (id) => {
-    if (confirm('Yakin ingin menghapus kelas ini?')) {
-      setClasses(classes.filter(c => c.id !== id));
+  const fetchClasses = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/classes`);
+      if (res.ok) {
+        const data = await res.json();
+        setClasses(data);
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const handleAdd = (e) => {
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (confirm('Yakin ingin menghapus kelas ini?')) {
+      try {
+        await fetch(`${apiUrl}/api/classes/${id}`, { method: 'DELETE' });
+        fetchClasses();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+  };
+
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (newClass.id && newClass.name) {
-      setClasses([...classes, newClass]);
-      setNewClass({ id: '', name: '' });
-      setShowAdd(false);
+      try {
+        const res = await fetch(`${apiUrl}/api/classes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: newClass.id, name: newClass.name })
+        });
+        if (res.ok) {
+          fetchClasses();
+          setNewClass({ id: '', name: '' });
+          setShowAdd(false);
+        } else {
+          const err = await res.json();
+          alert(err.error);
+        }
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 

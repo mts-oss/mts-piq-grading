@@ -1,37 +1,76 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, Plus, Trash2, Download } from 'lucide-react';
 
 export default function Subjects() {
-  const [subjects, setSubjects] = useState([
-    { id: 'M001', name: 'Pendidikan Agama Islam' },
-    { id: 'M002', name: 'Bahasa Arab' },
-    { id: 'M003', name: 'Matematika' },
-  ]);
-
+  const [subjects, setSubjects] = useState([]);
   const [newSubject, setNewSubject] = useState({ id: '', name: '' });
   const [showAdd, setShowAdd] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  const handleDelete = (id) => {
+  const fetchSubjects = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/subjects`);
+      if (res.ok) {
+        const data = await res.json();
+        setSubjects(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (confirm('Yakin ingin menghapus mata pelajaran ini?')) {
-      setSubjects(subjects.filter(s => s.id !== id));
-      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+      try {
+        await fetch(`${apiUrl}/api/subjects/${id}`, { method: 'DELETE' });
+        fetchSubjects();
+        setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (confirm(`Yakin ingin menghapus ${selectedIds.length} mata pelajaran yang dipilih?`)) {
-      setSubjects(subjects.filter(s => !selectedIds.includes(s.id)));
-      setSelectedIds([]);
+      try {
+        for (const id of selectedIds) {
+          await fetch(`${apiUrl}/api/subjects/${id}`, { method: 'DELETE' });
+        }
+        fetchSubjects();
+        setSelectedIds([]);
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (newSubject.id && newSubject.name) {
-      setSubjects([...subjects, newSubject]);
-      setNewSubject({ id: '', name: '' });
-      setShowAdd(false);
+      try {
+        const res = await fetch(`${apiUrl}/api/subjects`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: newSubject.id, name: newSubject.name })
+        });
+        if (res.ok) {
+          fetchSubjects();
+          setNewSubject({ id: '', name: '' });
+          setShowAdd(false);
+        } else {
+          const err = await res.json();
+          alert(err.error);
+        }
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 

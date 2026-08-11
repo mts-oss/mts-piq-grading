@@ -1,36 +1,76 @@
-import { useState } from 'react';
-import { Upload, Plus, Trash2, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 
 export default function Teachers() {
-  const [teachers, setTeachers] = useState([
-    { id: 'G001', name: 'Drs. H. Abdul Somad' },
-    { id: 'G002', name: 'Siti Aminah, S.Pd' },
-  ]);
-
+  const [teachers, setTeachers] = useState([]);
   const [newTeacher, setNewTeacher] = useState({ id: '', name: '' });
   const [showAdd, setShowAdd] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  const handleDelete = (id) => {
+  const fetchTeachers = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/teachers`);
+      if (res.ok) {
+        const data = await res.json();
+        setTeachers(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeachers();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (confirm('Yakin ingin menghapus guru ini?')) {
-      setTeachers(teachers.filter(t => t.id !== id));
-      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+      try {
+        await fetch(`${apiUrl}/api/teachers/${id}`, { method: 'DELETE' });
+        fetchTeachers();
+        setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (confirm(`Yakin ingin menghapus ${selectedIds.length} guru yang dipilih?`)) {
-      setTeachers(teachers.filter(t => !selectedIds.includes(t.id)));
-      setSelectedIds([]);
+      try {
+        for (const id of selectedIds) {
+          await fetch(`${apiUrl}/api/teachers/${id}`, { method: 'DELETE' });
+        }
+        fetchTeachers();
+        setSelectedIds([]);
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (newTeacher.id && newTeacher.name) {
-      setTeachers([...teachers, newTeacher]);
-      setNewTeacher({ id: '', name: '' });
-      setShowAdd(false);
+      try {
+        const res = await fetch(`${apiUrl}/api/teachers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: newTeacher.id, name: newTeacher.name })
+        });
+        if (res.ok) {
+          fetchTeachers();
+          setNewTeacher({ id: '', name: '' });
+          setShowAdd(false);
+        } else {
+          const err = await res.json();
+          alert(err.error);
+        }
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 
