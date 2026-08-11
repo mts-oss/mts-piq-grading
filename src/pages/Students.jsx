@@ -1,38 +1,135 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Upload, Plus, Trash2, Download, CheckSquare } from 'lucide-react';
 
 export default function Students() {
-  const [students, setStudents] = useState([
-    { id: '1001', name: 'Ahmad Fauzi', class: '7A' },
-    { id: '1002', name: 'Budi Santoso', class: '7A' },
-    { id: '1003', name: 'Citra Lestari', class: '7B' },
-  ]);
-
+  const [students, setStudents] = useState([]);
   const [newStudent, setNewStudent] = useState({ id: '', name: '', class: '' });
   const [showAdd, setShowAdd] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const fileInputRef = useRef(null);
+  
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  const handleDelete = (id) => {
+  const fetchStudents = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/students`);
+      if (res.ok) {
+        const data = await res.json();
+        setStudents(data.map(s => ({...s, class: s.classId})));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const handleDelete = async (id) => {
     if (confirm('Yakin ingin menghapus siswa ini?')) {
-      setStudents(students.filter(s => s.id !== id));
-      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+      try {
+        await fetch(`${apiUrl}/api/students/${id}`, { method: 'DELETE' });
+        fetchStudents();
+        setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (confirm(`Yakin ingin menghapus ${selectedIds.length} siswa yang dipilih?`)) {
-      setStudents(students.filter(s => !selectedIds.includes(s.id)));
-      setSelectedIds([]);
+      try {
+        for (const id of selectedIds) {
+          await fetch(`${apiUrl}/api/students/${id}`, { method: 'DELETE' });
+        }
+        fetchStudents();
+        setSelectedIds([]);
+      } catch (err) {
+        alert(err.message);
+      }
     }
   };
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (newStudent.id && newStudent.name && newStudent.class) {
-      setStudents([...students, newStudent]);
-      setNewStudent({ id: '', name: '', class: '' });
-      setShowAdd(false);
+      try {
+        const res = await fetch(`${apiUrl}/api/students`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: newStudent.id, name: newStudent.name, classId: newStudent.class })
+        });
+        if (res.ok) {
+          fetchStudents();
+          setNewStudent({ id: '', name: '', class: '' });
+          setShowAdd(false);
+        } else {
+          const err = await res.json();
+          alert(err.error);
+        }
+      } catch (err) {
+        alert(err.message);
+      }
     }
+  };
+
+  const handleDownloadTemplate = (e) => {
+    e.preventDefault();
+    const csvContent = "data:text/csv;charset=utf-8,ID Siswa / NIS,Nama Siswa,Kode Kelas\n1001,Ahmad Fauzi,7A\n1002,Budi Santoso,7B";
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "template_siswa.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const csvText = event.target.result;
+      const rows = csvText.split('\n');
+      const studentsToUpload = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        if (!rows[i].trim()) continue;
+        const cols = rows[i].split(',');
+        if (cols.length >= 3) {
+          studentsToUpload.push({
+            id: cols[0].trim(),
+            name: cols[1].trim(),
+            classId: cols[2].trim()
+          });
+        }
+      }
+
+      if (studentsToUpload.length > 0) {
+        try {
+          const res = await fetch(`${apiUrl}/api/students/bulk`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ students: studentsToUpload })
+          });
+          if (res.ok) {
+            alert('Berhasil upload ' + studentsToUpload.length + ' siswa!');
+            fetchStudents();
+          } else {
+            const data = await res.json();
+            alert('Gagal upload: ' + data.error);
+          }
+        } catch (err) {
+          alert('Error: ' + err.message);
+        }
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const toggleSelectAll = () => {
@@ -64,10 +161,17 @@ export default function Students() {
         <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
           <Plus size={18} /> Tambah Manual
         </button>
-        <button className="btn btn-secondary">
+        <input 
+          type="file" 
+          accept=".csv" 
+          ref={fileInputRef} 
+          style={{ display: 'none' }} 
+          onChange={handleFileUpload} 
+        />
+        <button className="btn btn-secondary" onClick={() => fileInputRef.current.click()}>
           <Upload size={18} /> Upload Masal
         </button>
-        <a href="#" className="btn btn-secondary" onClick={(e) => { e.preventDefault(); alert('Download template_siswa.csv berhasil disimulasikan.') }}>
+        <a href="#" className="btn btn-secondary" onClick={handleDownloadTemplate}>
           <Download size={18} /> Template CSV
         </a>
         {selectedIds.length > 0 && (

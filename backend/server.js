@@ -102,6 +102,19 @@ app.post('/api/students', async (req, res) => {
   }
 });
 
+app.post('/api/students/bulk', async (req, res) => {
+  const { students } = req.body; // array of { id, name, classId }
+  try {
+    const result = await prisma.student.createMany({
+      data: students,
+      skipDuplicates: true
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.delete('/api/students/:id', async (req, res) => {
   try {
     await prisma.student.delete({ where: { id: req.params.id } });
