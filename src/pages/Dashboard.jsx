@@ -1,11 +1,32 @@
+import { useState, useEffect } from 'react';
 import { Users, GraduationCap, BookOpen, ClipboardEdit } from 'lucide-react';
 
 export default function Dashboard() {
+  const [counts, setCounts] = useState({ classes: 0, students: 0, teachers: 0, subjects: 0 });
+  
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${apiUrl}/api/classes`).then(r => r.json()),
+      fetch(`${apiUrl}/api/students`).then(r => r.json()),
+      fetch(`${apiUrl}/api/teachers`).then(r => r.json()),
+      fetch(`${apiUrl}/api/subjects`).then(r => r.json())
+    ]).then(([cls, std, tch, sub]) => {
+      setCounts({
+        classes: cls.length || 0,
+        students: std.length || 0,
+        teachers: tch.length || 0,
+        subjects: sub.length || 0
+      });
+    }).catch(e => console.error("Error fetching dashboard data:", e));
+  }, []);
+
   const stats = [
-    { title: 'Total Kelas', value: '12', icon: <Users size={24} className="text-blue-500" />, color: 'var(--secondary)' },
-    { title: 'Total Siswa', value: '345', icon: <GraduationCap size={24} className="text-emerald-500" />, color: 'var(--primary)' },
-    { title: 'Total Guru', value: '45', icon: <Users size={24} className="text-orange-500" />, color: '#F97316' },
-    { title: 'Mata Pelajaran', value: '18', icon: <BookOpen size={24} className="text-purple-500" />, color: '#A855F7' },
+    { title: 'Total Kelas', value: counts.classes.toString(), icon: <Users size={24} className="text-blue-500" />, color: 'var(--secondary)' },
+    { title: 'Total Siswa', value: counts.students.toString(), icon: <GraduationCap size={24} className="text-emerald-500" />, color: 'var(--primary)' },
+    { title: 'Total Guru', value: counts.teachers.toString(), icon: <Users size={24} className="text-orange-500" />, color: '#F97316' },
+    { title: 'Mata Pelajaran', value: counts.subjects.toString(), icon: <BookOpen size={24} className="text-purple-500" />, color: '#A855F7' },
   ];
 
   return (

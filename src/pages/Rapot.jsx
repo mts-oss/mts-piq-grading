@@ -27,7 +27,7 @@ export default function Rapot() {
   const [sortBy, setSortBy] = useState('name'); // 'name' | 'average'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
 
-  const API_URL = 'http://localhost:3000';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   // Fetch initial master data
   useEffect(() => {

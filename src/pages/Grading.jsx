@@ -20,13 +20,15 @@ export default function Grading() {
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   useEffect(() => {
     // Fetch master data
     Promise.all([
-      fetch('http://localhost:3000/api/classes').then(r => r.json()),
-      fetch('http://localhost:3000/api/subjects').then(r => r.json()),
-      fetch('http://localhost:3000/api/teachers').then(r => r.json())
+      fetch(`${apiUrl}/api/classes`).then(r => r.json()),
+      fetch(`${apiUrl}/api/subjects`).then(r => r.json()),
+      fetch(`${apiUrl}/api/teachers`).then(r => r.json())
     ]).then(([cls, sub, tch]) => {
       setClasses(cls);
       setSubjects(sub);
@@ -40,7 +42,7 @@ export default function Grading() {
 
   useEffect(() => {
     // Fetch students and grades based on filter
-    fetch(`http://localhost:3000/api/grades?classId=${filter.class}&subjectId=${filter.subject}&teacherId=${filter.teacher}&lm=${activeTab}&component=${currentComponent}`)
+    fetch(`${apiUrl}/api/grades?classId=${filter.class}&subjectId=${filter.subject}&teacherId=${filter.teacher}&lm=${activeTab}&component=${currentComponent}`)
       .then(r => r.json())
       .then(data => {
         setStudents(data);
@@ -71,20 +73,23 @@ export default function Grading() {
   ];
 
   const handleSave = async () => {
-    const payload = {
-      subjectId: filter.subject,
-      teacherId: filter.teacher,
-      lm: activeTab,
-      component: currentComponent,
-      date: filter.date,
-      grades: students.map(s => ({ studentId: s.id, score: s.score }))
-    };
-
+    const gradesData = students.map(s => ({
+      studentId: s.id,
+      score: s.score
+    }));
+    
     try {
-      const res = await fetch('http://localhost:3000/api/grades', {
+      const res = await fetch(`${apiUrl}/api/grades`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          subjectId: filter.subject,
+          teacherId: filter.teacher,
+          lm: activeTab,
+          component: currentComponent,
+          date: filter.date,
+          grades: gradesData
+        })
       });
       if (res.ok) {
         alert('Nilai berhasil disimpan!');

@@ -15,7 +15,7 @@ export default function ExportExcelModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen) {
-      const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3000';
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       fetch(`${API_URL}/api/classes`).then(r => r.json()).then(setClasses);
       fetch(`${API_URL}/api/teachers`).then(r => r.json()).then(setTeachers);
     }
@@ -26,7 +26,7 @@ export default function ExportExcelModal({ isOpen, onClose }) {
   const handleExport = async () => {
     setLoading(true);
     try {
-      const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3000';
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const queryParams = new URLSearchParams();
       if (filters.classId) queryParams.append('classId', filters.classId);
       if (filters.teacherId) queryParams.append('teacherId', filters.teacherId);
