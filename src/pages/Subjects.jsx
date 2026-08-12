@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Upload, Plus, Trash2, Download } from 'lucide-react';
 
 export default function Subjects() {
@@ -6,6 +6,7 @@ export default function Subjects() {
   const [newSubject, setNewSubject] = useState({ id: '', name: '' });
   const [showAdd, setShowAdd] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const fileInputRef = useRef(null);
   
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -74,6 +75,62 @@ export default function Subjects() {
     }
   };
 
+  const handleDownloadTemplate = (e) => {
+    e.preventDefault();
+    const csvContent = "data:text/csv;charset=utf-8,ID Mapel,Nama Mapel\nM001,Pendidikan Agama Islam\nM002,Bahasa Arab";
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "template_mapel.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const csvText = event.target.result;
+      const rows = csvText.split('\n');
+      const subjectsToUpload = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        if (!rows[i].trim()) continue;
+        const cols = rows[i].split(',');
+        if (cols.length >= 2) {
+          subjectsToUpload.push({
+            id: cols[0].trim(),
+            name: cols[1].trim()
+          });
+        }
+      }
+
+      if (subjectsToUpload.length > 0) {
+        try {
+          const res = await fetch(`${apiUrl}/api/subjects/bulk`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subjects: subjectsToUpload })
+          });
+          if (res.ok) {
+            alert('Berhasil upload ' + subjectsToUpload.length + ' mapel!');
+            fetchSubjects();
+          } else {
+            const data = await res.json();
+            alert('Gagal upload: ' + data.error);
+          }
+        } catch (err) {
+          alert('Error: ' + err.message);
+        }
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const toggleSelectAll = () => {
     if (selectedIds.length === subjects.length) {
       setSelectedIds([]);
@@ -103,10 +160,17 @@ export default function Subjects() {
         <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
           <Plus size={18} /> Tambah Manual
         </button>
-        <button className="btn btn-secondary">
+        <input 
+          type="file" 
+          accept=".csv" 
+          ref={fileInputRef} 
+          style={{ display: 'none' }} 
+          onChange={handleFileUpload} 
+        />
+        <button className="btn btn-secondary" onClick={() => fileInputRef.current.click()}>
           <Upload size={18} /> Upload Masal
         </button>
-        <a href="#" className="btn btn-secondary" onClick={(e) => { e.preventDefault(); alert('Download template_mapel.csv berhasil disimulasikan.') }}>
+        <a href="#" className="btn btn-secondary" onClick={handleDownloadTemplate}>
           <Download size={18} /> Template CSV
         </a>
         {selectedIds.length > 0 && (

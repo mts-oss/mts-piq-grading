@@ -50,6 +50,19 @@ app.post('/api/teachers', async (req, res) => {
   }
 });
 
+app.post('/api/teachers/bulk', async (req, res) => {
+  const { teachers } = req.body;
+  try {
+    const result = await prisma.teacher.createMany({
+      data: teachers,
+      skipDuplicates: true
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.delete('/api/teachers/:id', async (req, res) => {
   try {
     await prisma.teacher.delete({ where: { id: req.params.id } });
@@ -70,6 +83,19 @@ app.post('/api/subjects', async (req, res) => {
   try {
     const subject = await prisma.subject.create({ data: { id, name } });
     res.json(subject);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/subjects/bulk', async (req, res) => {
+  const { subjects } = req.body;
+  try {
+    const result = await prisma.subject.createMany({
+      data: subjects,
+      skipDuplicates: true
+    });
+    res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
